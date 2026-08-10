@@ -2275,6 +2275,49 @@
         "src/app/layout.tsx"
       ],
       "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-056",
+      "titulo": "La evidencia fotografica se limpia de metadatos y se comprime en el dispositivo antes de subir",
+      "fecha": "2026-08-09",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "La foto de un telefono lleva EXIF con coordenadas GPS, modelo y hasta numero de serie, y pesa entre 3 y 8 MB. La evidencia termina en IPFS, que es publico y permanente: subirla cruda delata la ubicacion exacta de quien reporta — exactamente lo que la identidad pseudonima promete proteger — y ademas castiga la subida movil y el peso del sitio.",
+      "opciones": [
+        {
+          "nombre": "Limpiar los metadatos en el servidor o al conectar Pinata",
+          "descartada_porque": "El dato sensible ya habria salido del telefono. La unica limpieza que protege de verdad ocurre antes de que el archivo viaje."
+        },
+        {
+          "nombre": "Una libreria de compresion de imagenes",
+          "descartada_porque": "Canvas nativo hace el reencodado completo (pixeles sin metadatos + JPEG comprimido) sin agregar una dependencia que pueda romper el build antes del 12 (regla del repo)."
+        },
+        {
+          "nombre": "Si el procesado falla, subir la original",
+          "descartada_porque": "Fallar abierto filtra el GPS de la casa del vecino. Se prefiere pedir otra foto: la evidencia es opcional, la privacidad no."
+        }
+      ],
+      "decision": "Al elegir la foto en el flujo de reporte, `limpiarYComprimirImagen` (src/lib/imagen.ts) la reencoda en un canvas: al lienzo solo pasan los pixeles, asi que el JPEG de salida no conserva ningun metadato del original; a la vez se redimensiona a 1600 px de lado mayor con calidad 0.8. El original nunca sigue viaje: la vista previa, la miniatura y la subida usan la copia limpia. Si el procesado falla, se descarta y se pide otra imagen (fail-closed). La nota bajo el selector explica la limpieza dentro del producto, como el resto de lo etiquetado.",
+      "consecuencias": [
+        "Una foto tipica de 4 MB queda en cientos de KB: menos datos moviles, hash mas rapido y sitio mas liviano.",
+        "El JPEG reencodado no lleva EXIF, GPS ni identificadores del dispositivo; la orientacion se aplica al decodificar, asi que la copia sale derecha.",
+        "Los PNG transparentes salen sobre fondo blanco: JPEG no tiene canal alfa.",
+        "La parte pura (dimensionesDestino, nombreJpeg) tiene tests; el reencodado usa canvas y solo corre en el navegador.",
+        "Cuando el equipo conecte Pinata, el adaptador recibe el archivo ya limpio sin cambiar nada."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: volver a pasar el File crudo en el onChange del selector.",
+      "criterios_rubrica": [
+        "problema",
+        "tecnica",
+        "ux"
+      ],
+      "evidencia": [
+        "src/lib/imagen.ts",
+        "src/lib/imagen.test.ts",
+        "src/components/reportar/FlujoReporte.tsx"
+      ],
+      "requiere_validacion_humana": false
     }
   ]
 }

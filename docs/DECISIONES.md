@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**57 decisiones registradas · 28 esperan validacion humana**
+**58 decisiones registradas · 28 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -100,6 +100,7 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-053](#adr-053) | Cloudflare delante del despliegue en Vercel | Humano | aceptada | alta | Implementacion tecnica |
 | [ADR-054](#adr-054) | La red publica solo muestra reportes de personas: purga de semillas persistidas y recompensa etiquetada como simulacion | IA+Humano | aceptada | alta | Problema e impacto, Producto y UX, Pitch y demo |
 | [ADR-055](#adr-055) | Campania de votos del hackathon y redes sociales visibles en la app | Humano | aceptada | alta | Pitch y demo |
+| [ADR-056](#adr-056) | La evidencia fotografica se limpia de metadatos y se comprime en el dispositivo antes de subir | IA+Humano | aceptada | alta | Problema e impacto, Implementacion tecnica, Producto y UX |
 
 ---
 
@@ -1893,3 +1894,35 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Sirve a.** Pitch y demo
 
 **Evidencia en el codigo.** `src/lib/promocion.ts`, `src/lib/promocion.test.ts`, `src/components/promocion/AvisoVotacion.tsx`, `src/components/promocion/RedesSociales.tsx`, `src/app/layout.tsx`
+
+---
+
+## ADR-056
+
+### La evidencia fotografica se limpia de metadatos y se comprime en el dispositivo antes de subir
+
+`2026-08-09` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** La foto de un telefono lleva EXIF con coordenadas GPS, modelo y hasta numero de serie, y pesa entre 3 y 8 MB. La evidencia termina en IPFS, que es publico y permanente: subirla cruda delata la ubicacion exacta de quien reporta — exactamente lo que la identidad pseudonima promete proteger — y ademas castiga la subida movil y el peso del sitio.
+
+**Alternativas descartadas.**
+
+- *Limpiar los metadatos en el servidor o al conectar Pinata* — El dato sensible ya habria salido del telefono. La unica limpieza que protege de verdad ocurre antes de que el archivo viaje.
+- *Una libreria de compresion de imagenes* — Canvas nativo hace el reencodado completo (pixeles sin metadatos + JPEG comprimido) sin agregar una dependencia que pueda romper el build antes del 12 (regla del repo).
+- *Si el procesado falla, subir la original* — Fallar abierto filtra el GPS de la casa del vecino. Se prefiere pedir otra foto: la evidencia es opcional, la privacidad no.
+
+**Decision.** Al elegir la foto en el flujo de reporte, `limpiarYComprimirImagen` (src/lib/imagen.ts) la reencoda en un canvas: al lienzo solo pasan los pixeles, asi que el JPEG de salida no conserva ningun metadato del original; a la vez se redimensiona a 1600 px de lado mayor con calidad 0.8. El original nunca sigue viaje: la vista previa, la miniatura y la subida usan la copia limpia. Si el procesado falla, se descarta y se pide otra imagen (fail-closed). La nota bajo el selector explica la limpieza dentro del producto, como el resto de lo etiquetado.
+
+**Consecuencias.**
+
+- Una foto tipica de 4 MB queda en cientos de KB: menos datos moviles, hash mas rapido y sitio mas liviano.
+- El JPEG reencodado no lleva EXIF, GPS ni identificadores del dispositivo; la orientacion se aplica al decodificar, asi que la copia sale derecha.
+- Los PNG transparentes salen sobre fondo blanco: JPEG no tiene canal alfa.
+- La parte pura (dimensionesDestino, nombreJpeg) tiene tests; el reencodado usa canvas y solo corre en el navegador.
+- Cuando el equipo conecte Pinata, el adaptador recibe el archivo ya limpio sin cambiar nada.
+
+**Costo de revertir.** Bajo: volver a pasar el File crudo en el onChange del selector.
+
+**Sirve a.** Problema e impacto, Implementacion tecnica, Producto y UX
+
+**Evidencia en el codigo.** `src/lib/imagen.ts`, `src/lib/imagen.test.ts`, `src/components/reportar/FlujoReporte.tsx`

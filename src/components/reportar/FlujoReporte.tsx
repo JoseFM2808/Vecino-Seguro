@@ -13,6 +13,7 @@ import { CATEGORIAS, esIdCategoria, obtenerCategoria } from "@/lib/categorias";
 import { TEXTO_ETAPA, type EtapaFlujo, type ResultadoFlujo } from "@/lib/flujo-reporte";
 import { abreviarHash, formatearUsd } from "@/lib/formato";
 import { formatearCoordenada } from "@/lib/geo";
+import { limpiarYComprimirImagen } from "@/lib/imagen";
 import type { Coordenada, IdCategoria } from "@/lib/tipos";
 import { describirZona, listaDistritos } from "@/lib/zonas";
 
@@ -49,6 +50,9 @@ export function FlujoReporte() {
   const [descripcion, setDescripcion] = useState("");
   const [archivo, setArchivo] = useState<File | null>(null);
   const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
+  /** La foto se esta limpiando y comprimiendo (ADR-056). */
+  const [procesandoFoto, setProcesandoFoto] = useState(false);
+  const [errorFoto, setErrorFoto] = useState<string | null>(null);
   const [coordenada, setCoordenada] = useState<Coordenada | null>(null);
   /** Radio de incertidumbre que reporta el navegador, en metros. */
   const [precisionM, setPrecisionM] = useState<number | null>(null);
@@ -115,6 +119,7 @@ export function FlujoReporte() {
     setCategoria(null);
     setDescripcion("");
     setArchivo(null);
+    setErrorFoto(null);
     setCoordenada(null);
     setPrecisionM(null);
     setZonaManual(null);
@@ -271,7 +276,25 @@ export function FlujoReporte() {
             accept="image/*"
             capture="environment"
             className="hidden"
-            onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+            onChange={async (e) => {
+              const crudo = e.target.files?.[0] ?? null;
+              // Se vacia el input para poder reelegir la misma foto tras un error.
+              e.target.value = "";
+              if (!crudo) return;
+
+              setErrorFoto(null);
+              setProcesandoFoto(true);
+              try {
+                // El original nunca sigue viaje (ADR-056): lo que se guarda, se
+                // previsualiza y se sube es la copia sin EXIF/GPS y comprimida.
+                setArchivo(await limpiarYComprimirImagen(crudo));
+              } catch {
+                setArchivo(null);
+                setErrorFoto("No se pudo procesar esa imagen. Intenta con otra foto.");
+              } finally {
+                setProcesandoFoto(false);
+              }
+            }}
           />
           {vistaPrevia ? (
             <div className="relative">
@@ -292,13 +315,23 @@ export function FlujoReporte() {
           ) : (
             <button
               type="button"
+              disabled={procesandoFoto}
               onClick={() => inputArchivo.current?.click()}
-              className="toque flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-borde bg-superficie py-5 text-sm text-suave transition active:scale-[0.99]"
+              className="toque flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-borde bg-superficie py-5 text-sm text-suave transition active:scale-[0.99] disabled:opacity-60"
             >
               <Icono nombre="camara" className="h-5 w-5" />
-              Tomar o elegir una foto
+              {procesandoFoto ? "Procesando la foto…" : "Tomar o elegir una foto"}
             </button>
           )}
+          {errorFoto ? (
+            <p role="alert" className="mt-1.5 text-[11px] leading-relaxed text-alerta">
+              {errorFoto}
+            </p>
+          ) : null}
+          <p className="mt-1.5 text-[11px] leading-relaxed text-tenue">
+            Antes de subirla, la foto se comprime y se le quitan los metadatos
+            (ubicacion GPS y datos del telefono): lo unico que viaja es la imagen.
+          </p>
         </div>
 
         <div>
