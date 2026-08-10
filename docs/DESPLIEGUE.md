@@ -65,6 +65,13 @@ Se hacen una sola vez, en **Project Settings**.
   desde el CDN igual. Es un toggle del panel, sin riesgo para el build — por eso **no** está en
   `vercel.json`, donde un valor no soportado tumbaría el deploy.
 
+### Web Analytics
+- **Analytics** (pestaña del proyecto) → **Enable**. La app ya monta `<Analytics/>` en el layout
+  raíz (ADR-052): sin cookies, agregado, servido desde el mismo origen — la CSP no necesita
+  cambios. Sin este toggle, el componente no registra nada.
+- Si tras 30 segundos de visitas no aparecen datos: revisar bloqueadores de contenido en el
+  navegador de prueba y navegar entre pestañas de la app para generar más de una vista.
+
 ### Deployment Protection — **revisar antes de compartir nada**
 Si está activada la protección, cualquiera que abra el enlace ve primero un login de Vercel.
 Descubrirlo con el jurado delante es el peor momento.
@@ -75,6 +82,30 @@ Descubrirlo con el jurado delante es el peor momento.
    cerradas aunque el dominio corto esté abierto.
 3. Probar el enlace final **en un celular con datos móviles y ventana de incógnito**. Una
    ventana de incógnito en la laptop no basta si hay sesión de Vercel en el navegador.
+
+---
+
+## 2.b Cloudflare delante del despliegue
+
+El despliegue vive en Vercel, pero el tráfico del dominio cuenta además con soporte de
+**Cloudflare** (ADR-053). Funciones activas:
+
+- **Seguridad del lado del cliente**: supervisa los scripts de terceros, las conexiones y las
+  cookies que se cargan en los navegadores de los visitantes. Complementa a la CSP de
+  `next.config.ts`: la política dice qué se permite; Cloudflare vigila lo que efectivamente carga.
+- **Modo de lucha de bots**: desafía a los bots con firmas de tráfico conocidas. Protege contra
+  el rastreo de contenido, el fraude de clics y el relleno de credenciales.
+- **Optimizaciones de velocidad**: precarga de la siguiente página más probable y reanudación
+  de conexiones para visitantes recurrentes.
+
+Qué implica para el equipo:
+
+- Al diagnosticar una respuesta rara, primero distinguir **de qué capa viene**: Vercel
+  (build, funciones, cabeceras) o Cloudflare (desafíos, caché, optimizaciones).
+- El modo de lucha de bots puede desafiar tráfico automatizado **legítimo** (monitores,
+  pruebas E2E). Tenerlo presente antes de la demo del 12.
+- Las cabeceras de seguridad y la CSP se siguen definiendo en `next.config.ts`;
+  Cloudflare no las reemplaza.
 
 ---
 
@@ -265,3 +296,5 @@ Hacerlo con **días** de anticipación, no la mañana del 12.
 | El login devuelve `redirect_uri_mismatch` | El dominio cambió y Google sigue con la URI vieja | Añadir `https://vecino-seguro.vercel.app/api/auth/callback/google` en Google Cloud Console. |
 | El último deploy salió mal | — | **Deployments > ⋯ > Instant Rollback** al anterior. |
 | El deploy no incluye mis cambios | El push no llegó a `main`, o el Ignored Build Step lo canceló | `git log origin/main` y revisar el estado del deployment. |
+| Un visitante o un monitor ve un desafío inesperado | Modo de lucha de bots de Cloudflare | Panel de Cloudflare → Security → Bots. Evaluar relajarlo durante la demo. |
+| Analytics no muestra visitas | Web Analytics sin habilitar en el panel, o bloqueador de contenido | Pestaña Analytics → Enable; probar sin bloqueadores y navegar entre pestañas. |

@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**53 decisiones registradas · 28 esperan validacion humana**
+**55 decisiones registradas · 28 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -96,6 +96,8 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-049](#adr-049) | Sin wallet inyectada, el modo arbitrum ancla con comprobante simulado en vez de romper el reporte | IA+Humano | aceptada | alta | Ecosistema Arbitrum, Producto y UX, Implementacion tecnica |
 | [ADR-050](#adr-050) | Privy con wallet embebida cierra el hueco de firma: quien entra con Google ancla de verdad | IA+Humano | aceptada | media | Ecosistema Arbitrum, Producto y UX, Implementacion tecnica |
 | [ADR-051](#adr-051) | Grifo automatico de gas de testnet: la app deposita sola la primera carga al activar la firma | IA+Humano | aceptada | alta | Producto y UX, Ecosistema Arbitrum, Implementacion tecnica |
+| [ADR-052](#adr-052) | Medicion de trafico con Vercel Analytics, sin cookies | IA+Humano | aceptada | alta | Implementacion tecnica, Pitch y demo |
+| [ADR-053](#adr-053) | Cloudflare delante del despliegue en Vercel | Humano | aceptada | alta | Implementacion tecnica |
 
 ---
 
@@ -1769,3 +1771,63 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Evidencia en el codigo.** `src/lib/gas-goteo.ts`, `src/lib/gas-goteo.test.ts`, `src/app/api/gas/route.ts`, `src/components/proveedores/ProveedorPrivy.tsx`
 
 > **Necesita decision humana:** El grifo necesita su wallet: crear una NUEVA (jamas reutilizar la del despliegue ni una con fondos reales), fondearla con ETH de Sepolia de un faucet (con ~0.05 alcanza para cien probadores), y cargar su clave privada como GAS_DRIP_PRIVATE_KEY en .env.local (para la prueba local) y en Vercel como Sensitive (Production y Preview). Yo no debo ver ni manejar esa clave: pegarla directamente. Sin ella todo sigue funcionando en modo simulado.
+
+---
+
+## ADR-052
+
+### Medicion de trafico con Vercel Analytics, sin cookies
+
+`2026-08-09` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** La beta ya esta desplegada y compartida con vecinos, pero no hay forma de saber si alguien la visita ni que pestanas usa. El proyecto promete identidad pseudonima, asi que cualquier medicion tiene que evitar cookies e identificadores personales.
+
+**Alternativas descartadas.**
+
+- *Google Analytics* — Usa cookies e identificadores de usuario, exige banner de consentimiento y abriria la CSP a origenes de terceros. Choca de frente con la promesa de pseudonimato.
+- *No medir nada* — Sin datos de visitas no se puede saber si la beta se usa ni priorizar que mejorar antes de la demo.
+
+**Decision.** Se agrega @vercel/analytics con el componente <Analytics/> en el layout raiz. Es medicion agregada y sin cookies; en produccion el script y el beacon se sirven desde el mismo origen (/_vercel/insights), asi que la CSP vigente (script-src y connect-src 'self') lo cubre sin cambios.
+
+**Consecuencias.**
+
+- Solo emite datos en produccion sobre Vercel; en local y en previews de desarrollo no envia nada.
+- Hay que habilitar Web Analytics en el panel del proyecto en Vercel para ver los datos.
+- La resolucion legacy-peer-deps que el repo ya fija en .npmrc (ADR-050) cubre tambien a este paquete: sus peers opcionales de Svelte chocan con el vite 7 de vitest, pero al ser opcionales no se instalan.
+- No se recogen cookies ni datos personales: compatible con la identidad pseudonima por defecto.
+- Cuatro paquetes nuevos en node_modules; es el costo de saber si la beta se usa.
+
+**Costo de revertir.** Bajo: quitar el componente del layout y desinstalar el paquete.
+
+**Sirve a.** Implementacion tecnica, Pitch y demo
+
+**Evidencia en el codigo.** `src/app/layout.tsx`, `package.json`
+
+---
+
+## ADR-053
+
+### Cloudflare delante del despliegue en Vercel
+
+`2026-08-09` · autor: **Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El despliegue vive en Vercel desde main, pero el trafico del dominio pasa ademas por Cloudflare, contratado por el equipo. Habia que decidir si esa capa se documenta como parte de la plataforma o queda como conocimiento tacito de quien la configuro.
+
+**Alternativas descartadas.**
+
+- *Dejarlo sin documentar* — El dia de la demo, un desafio de Cloudflare a un bot o una optimizacion de velocidad inesperada seria imposible de diagnosticar rapido si nadie sabe que esa capa existe.
+
+**Decision.** Se documenta en docs/DESPLIEGUE.md que Cloudflare acompana al despliegue de Vercel con tres funciones activas: seguridad del lado del cliente (supervision de scripts de terceros, conexiones y cookies que cargan los navegadores), modo de lucha de bots (desafia bots con firmas conocidas contra rastreo de contenido, fraude de clics y relleno de credenciales) y optimizaciones de velocidad (precarga de la siguiente pagina probable y reanudacion de conexiones para visitantes recurrentes).
+
+**Consecuencias.**
+
+- El diagnostico de incidencias tiene un paso nuevo: distinguir si una respuesta rara viene de Vercel o de Cloudflare.
+- El modo de lucha de bots puede desafiar trafico automatizado legitimo (pruebas, monitores); tenerlo presente antes de la demo.
+- Las cabeceras y la CSP siguen definiendose en next.config.ts; Cloudflare no las reemplaza.
+- La supervision de scripts de terceros de Cloudflare complementa a la CSP: ve lo que la politica permite pero no vigila.
+
+**Costo de revertir.** Bajo: apuntar el DNS directo a Vercel y borrar la seccion del runbook.
+
+**Sirve a.** Implementacion tecnica
+
+**Evidencia en el codigo.** `docs/DESPLIEGUE.md`

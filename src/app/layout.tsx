@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PuertaAcceso } from "@/components/acceso/PuertaAcceso";
@@ -86,6 +87,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </UbicacionProvider>
           </ProveedorPrivy>
         </SesionProvider>
+        {/* Metricas agregadas sin cookies; solo emite en produccion sobre Vercel (ADR-052). */}
+        <Analytics />
       </body>
     </html>
   );

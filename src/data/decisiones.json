@@ -2130,6 +2130,73 @@
       ],
       "requiere_validacion_humana": true,
       "nota_para_humano": "El grifo necesita su wallet: crear una NUEVA (jamas reutilizar la del despliegue ni una con fondos reales), fondearla con ETH de Sepolia de un faucet (con ~0.05 alcanza para cien probadores), y cargar su clave privada como GAS_DRIP_PRIVATE_KEY en .env.local (para la prueba local) y en Vercel como Sensitive (Production y Preview). Yo no debo ver ni manejar esa clave: pegarla directamente. Sin ella todo sigue funcionando en modo simulado."
+    },
+    {
+      "id": "ADR-052",
+      "titulo": "Medicion de trafico con Vercel Analytics, sin cookies",
+      "fecha": "2026-08-09",
+      "autor": "IA+Humano",
+      "estado": "aceptada",
+      "contexto": "La beta ya esta desplegada y compartida con vecinos, pero no hay forma de saber si alguien la visita ni que pestanas usa. El proyecto promete identidad pseudonima, asi que cualquier medicion tiene que evitar cookies e identificadores personales.",
+      "opciones": [
+        {
+          "nombre": "Google Analytics",
+          "descartada_porque": "Usa cookies e identificadores de usuario, exige banner de consentimiento y abriria la CSP a origenes de terceros. Choca de frente con la promesa de pseudonimato."
+        },
+        {
+          "nombre": "No medir nada",
+          "descartada_porque": "Sin datos de visitas no se puede saber si la beta se usa ni priorizar que mejorar antes de la demo."
+        }
+      ],
+      "decision": "Se agrega @vercel/analytics con el componente <Analytics/> en el layout raiz. Es medicion agregada y sin cookies; en produccion el script y el beacon se sirven desde el mismo origen (/_vercel/insights), asi que la CSP vigente (script-src y connect-src 'self') lo cubre sin cambios.",
+      "consecuencias": [
+        "Solo emite datos en produccion sobre Vercel; en local y en previews de desarrollo no envia nada.",
+        "Hay que habilitar Web Analytics en el panel del proyecto en Vercel para ver los datos.",
+        "La resolucion legacy-peer-deps que el repo ya fija en .npmrc (ADR-050) cubre tambien a este paquete: sus peers opcionales de Svelte chocan con el vite 7 de vitest, pero al ser opcionales no se instalan.",
+        "No se recogen cookies ni datos personales: compatible con la identidad pseudonima por defecto.",
+        "Cuatro paquetes nuevos en node_modules; es el costo de saber si la beta se usa."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: quitar el componente del layout y desinstalar el paquete.",
+      "criterios_rubrica": [
+        "tecnica",
+        "pitch"
+      ],
+      "evidencia": [
+        "src/app/layout.tsx",
+        "package.json"
+      ],
+      "requiere_validacion_humana": false
+    },
+    {
+      "id": "ADR-053",
+      "titulo": "Cloudflare delante del despliegue en Vercel",
+      "fecha": "2026-08-09",
+      "autor": "Humano",
+      "estado": "aceptada",
+      "contexto": "El despliegue vive en Vercel desde main, pero el trafico del dominio pasa ademas por Cloudflare, contratado por el equipo. Habia que decidir si esa capa se documenta como parte de la plataforma o queda como conocimiento tacito de quien la configuro.",
+      "opciones": [
+        {
+          "nombre": "Dejarlo sin documentar",
+          "descartada_porque": "El dia de la demo, un desafio de Cloudflare a un bot o una optimizacion de velocidad inesperada seria imposible de diagnosticar rapido si nadie sabe que esa capa existe."
+        }
+      ],
+      "decision": "Se documenta en docs/DESPLIEGUE.md que Cloudflare acompana al despliegue de Vercel con tres funciones activas: seguridad del lado del cliente (supervision de scripts de terceros, conexiones y cookies que cargan los navegadores), modo de lucha de bots (desafia bots con firmas conocidas contra rastreo de contenido, fraude de clics y relleno de credenciales) y optimizaciones de velocidad (precarga de la siguiente pagina probable y reanudacion de conexiones para visitantes recurrentes).",
+      "consecuencias": [
+        "El diagnostico de incidencias tiene un paso nuevo: distinguir si una respuesta rara viene de Vercel o de Cloudflare.",
+        "El modo de lucha de bots puede desafiar trafico automatizado legitimo (pruebas, monitores); tenerlo presente antes de la demo.",
+        "Las cabeceras y la CSP siguen definiendose en next.config.ts; Cloudflare no las reemplaza.",
+        "La supervision de scripts de terceros de Cloudflare complementa a la CSP: ve lo que la politica permite pero no vigila."
+      ],
+      "reversibilidad": "alta",
+      "costo_de_revertir": "Bajo: apuntar el DNS directo a Vercel y borrar la seccion del runbook.",
+      "criterios_rubrica": [
+        "tecnica"
+      ],
+      "evidencia": [
+        "docs/DESPLIEGUE.md"
+      ],
+      "requiere_validacion_humana": false
     }
   ]
 }
