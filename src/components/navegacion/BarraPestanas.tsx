@@ -6,6 +6,7 @@ import { signIn } from "next-auth/react";
 import { useApp } from "@/components/proveedores/AppProvider";
 import { useCirculo } from "@/components/proveedores/CirculoProvider";
 import { useGoogleDisponible } from "@/components/proveedores/SesionProvider";
+import { RedesSociales } from "@/components/promocion/RedesSociales";
 import { Icono, type NombreIcono } from "@/components/ui/Icono";
 
 /**
@@ -157,6 +158,11 @@ export function BarraPestanas() {
           );
         })}
       </ul>
+
+      {/* Solo escritorio: redes del proyecto al pie de la barra lateral (ADR-055). */}
+      <div className="absolute inset-x-0 bottom-5 hidden md:flex md:justify-center">
+        <RedesSociales />
+      </div>
     </nav>
   );
 }

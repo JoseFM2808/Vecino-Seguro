@@ -4,7 +4,7 @@
 
 Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o por el equipo se registra aquí ANTES o AL MOMENTO de escribir el código que la implementa. `docs/DECISIONES.md` se genera desde este archivo (npm run docs) y la pestaña Arquitectura de la app lo renderiza.
 
-**55 decisiones registradas · 28 esperan validacion humana**
+**57 decisiones registradas · 28 esperan validacion humana**
 
 ## Esperan que una persona decida
 
@@ -98,6 +98,8 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 | [ADR-051](#adr-051) | Grifo automatico de gas de testnet: la app deposita sola la primera carga al activar la firma | IA+Humano | aceptada | alta | Producto y UX, Ecosistema Arbitrum, Implementacion tecnica |
 | [ADR-052](#adr-052) | Medicion de trafico con Vercel Analytics, sin cookies | IA+Humano | aceptada | alta | Implementacion tecnica, Pitch y demo |
 | [ADR-053](#adr-053) | Cloudflare delante del despliegue en Vercel | Humano | aceptada | alta | Implementacion tecnica |
+| [ADR-054](#adr-054) | La red publica solo muestra reportes de personas: purga de semillas persistidas y recompensa etiquetada como simulacion | IA+Humano | aceptada | alta | Problema e impacto, Producto y UX, Pitch y demo |
+| [ADR-055](#adr-055) | Campania de votos del hackathon y redes sociales visibles en la app | Humano | aceptada | alta | Pitch y demo |
 
 ---
 
@@ -1831,3 +1833,63 @@ Bitácora auditable de decisiones. Toda decisión no trivial tomada por la IA o 
 **Sirve a.** Implementacion tecnica
 
 **Evidencia en el codigo.** `docs/DESPLIEGUE.md`
+
+---
+
+## ADR-054
+
+### La red publica solo muestra reportes de personas: purga de semillas persistidas y recompensa etiquetada como simulacion
+
+`2026-08-09` · autor: **IA+Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** ADR-040 apago los datos de demo por defecto, pero los dispositivos que cargaron la app cuando venian encendidos conservan las semillas en localStorage y las siguen mostrando mezcladas con reportes reales. Ademas, la recompensa en token se muestra sin aclarar que todavia no tiene valor economico, y la app ya esta en manos de vecinos de verdad.
+
+**Alternativas descartadas.**
+
+- *Pedir a cada persona que use Cuenta > Reiniciar datos* — Nadie va a hacerlo: es un paso manual escondido y mientras tanto las cifras publicas mienten.
+- *Borrar todo el almacenamiento local en el arranque* — Se llevaria por delante los reportes reales que la gente ya publico, que es exactamente lo que hay que conservar.
+
+**Decision.** En el arranque, con los datos de demo apagados, AppProvider filtra los reportes con esSemilla y CirculoProvider los contactos con origen demo, y persisten la lista depurada. Solo sobrevive lo que reporto o agrego una persona. La recompensa se marca con EtiquetaSimulado y una nota en las tres vistas donde se ve (exito del reporte, hoja de detalle y saldo en Cuenta): es una simulacion porque la aplicacion aun esta en demo.
+
+**Consecuencias.**
+
+- Los dispositivos con semillas viejas quedan limpios en la primera carga; los reportes reales no se tocan.
+- Con NEXT_PUBLIC_DATOS_DEMO=1 (ensayo del pitch) nada cambia: las semillas siguen disponibles.
+- La promesa de transparencia del pitch (lo simulado se etiqueta dentro del producto) ahora cubre tambien la recompensa.
+- Verificado en produccion que la red arranca vacia: la variable de demo no esta activa en Vercel.
+
+**Costo de revertir.** Bajo: quitar el filtro del arranque y las notas de la recompensa. Las semillas purgadas se recuperan con Reiniciar datos si los demo estan encendidos.
+
+**Sirve a.** Problema e impacto, Producto y UX, Pitch y demo
+
+**Evidencia en el codigo.** `src/components/proveedores/AppProvider.tsx`, `src/components/proveedores/CirculoProvider.tsx`, `src/components/reportar/FlujoReporte.tsx`, `src/components/reportes/HojaDetalle.tsx`, `src/components/cuenta/PanelCuenta.tsx`
+
+---
+
+## ADR-055
+
+### Campania de votos del hackathon y redes sociales visibles en la app
+
+`2026-08-09` · autor: **Humano** · estado: **aceptada** · reversibilidad: **alta**
+
+**Contexto.** El proyecto compite en la plataforma de ETH Lima y los votos del publico cuentan hasta el 12 de agosto. El equipo abrio LinkedIn e Instagram y quiere que la beta misma pida el apoyo, porque es donde ya hay vecinos entrando.
+
+**Alternativas descartadas.**
+
+- *Pedir votos solo por redes y chats* — El trafico ya esta en la app; no aprovecharlo es dejar votos sobre la mesa.
+- *Un banner permanente dentro de las pantallas* — Ocuparia sitio en pantallas que ya estan justas de espacio en movil, y seguiria ahi cuando la votacion muera.
+
+**Decision.** Un popup (AvisoVotacion) invita a votar con enlace directo a la plataforma. Se muestra una vez por dispositivo (cerrado o votado queda en localStorage) y se apaga solo desde el 13 de agosto, hora de Lima: la regla es una funcion pura en src/lib/promocion.ts con tests. Los enlaces a LinkedIn e Instagram van en un pie de pagina en todas las pantallas y al pie de la barra lateral de escritorio.
+
+**Consecuencias.**
+
+- El popup nunca se repite en bucle: cerrado una vez, no vuelve a aparecer en ese dispositivo.
+- Despues del 12 de agosto el componente no se monta mas; no hay que desplegar para apagarlo.
+- Los enlaces salen a dominios externos como navegacion normal: la CSP no cambia.
+- Un popup delante del jurado es un riesgo conocido: en el dispositivo de la demo se cierra una vez durante el ensayo y no vuelve.
+
+**Costo de revertir.** Bajo: quitar AvisoVotacion del layout y el pie de RedesSociales.
+
+**Sirve a.** Pitch y demo
+
+**Evidencia en el codigo.** `src/lib/promocion.ts`, `src/lib/promocion.test.ts`, `src/components/promocion/AvisoVotacion.tsx`, `src/components/promocion/RedesSociales.tsx`, `src/app/layout.tsx`

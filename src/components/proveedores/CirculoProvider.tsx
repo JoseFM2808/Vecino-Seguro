@@ -160,7 +160,11 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
     const guardados = cargarContactos();
     // Sin datos de demo (ADR-040) el circulo arranca vacio: los contactos los agrega
     // la persona. En una prueba real, contactos inventados solo confunden los avisos.
-    const iniciales = guardados ?? (CONFIG.datosDemo ? contactosSembrados(ahora) : []);
+    // Los contactos de demo que quedaron persistidos de una version anterior se
+    // purgan aqui (ADR-054), igual que las semillas de reportes.
+    const depurados =
+      guardados && !CONFIG.datosDemo ? guardados.filter((c) => c.origen !== "demo") : guardados;
+    const iniciales = depurados ?? (CONFIG.datosDemo ? contactosSembrados(ahora) : []);
 
     if (CONFIG.datosDemo) {
       for (const { id, base } of BASES_DEMO) registrarBase(id, base);
@@ -176,6 +180,7 @@ export function CirculoProvider({ children }: { children: ReactNode }) {
     setPermiso(permisoActual());
     setListo(true);
     if (!guardados) guardarContactos(iniciales);
+    else if (depurados && depurados.length !== guardados.length) guardarContactos(depurados);
   }, [habilitado, registrarBase]);
 
   // Latido simulado: SOLO mueve a los contactos de demo (ADR-046). A una persona real

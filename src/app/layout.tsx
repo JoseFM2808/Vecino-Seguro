@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PuertaAcceso } from "@/components/acceso/PuertaAcceso";
 import { BarraPestanas } from "@/components/navegacion/BarraPestanas";
+import { AvisoVotacion } from "@/components/promocion/AvisoVotacion";
+import { RedesSociales } from "@/components/promocion/RedesSociales";
 import { AppProvider } from "@/components/proveedores/AppProvider";
 import { ProveedorPrivy } from "@/components/proveedores/ProveedorPrivy";
 import { CirculoProvider } from "@/components/proveedores/CirculoProvider";
@@ -78,9 +80,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <div className="md:pl-60">
                     <div className="mx-auto flex min-h-dvh max-w-lg flex-col md:max-w-2xl">
                       <main className="flex-1 espacio-barra md:pb-10">{children}</main>
+                      {/*
+                        Redes del proyecto al pie de cada pagina (ADR-055). El -mt-10
+                        recupera parte del colchon que main deja para la barra movil;
+                        espacio-barra le da al pie su propia holgura sobre esa barra.
+                      */}
+                      <footer className="espacio-barra -mt-10 px-4 md:mt-0 md:pb-8">
+                        <RedesSociales conTitulo />
+                      </footer>
                     </div>
                   </div>
                   <BarraPestanas />
+                  {/* Campania de votos del hackathon: se apaga solo el 13 de agosto (ADR-055). */}
+                  <AvisoVotacion />
                 </PuertaAcceso>
               </CirculoProvider>
             </AppProvider>

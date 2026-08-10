@@ -68,7 +68,10 @@ export function PanelCuenta() {
       <FirmaDigital />
 
       <section>
-        <h2 className="etiqueta-seccion mb-2">Recompensas</h2>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="etiqueta-seccion">Recompensas</h2>
+          <EtiquetaSimulado titulo="Recompensas de demostracion: el token aun no tiene valor real" />
+        </div>
         <div className="tarjeta p-4">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -87,6 +90,10 @@ export function PanelCuenta() {
               valor={cadena.simulado ? "pendiente de TokenReward.sol" : `${saldo} VSG`}
             />
           </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-tenue">
+            Estas recompensas son una simulacion: la aplicacion aun esta en demo y el token
+            todavia no tiene valor real.
+          </p>
         </div>
       </section>
 

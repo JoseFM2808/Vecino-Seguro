@@ -133,13 +133,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const guardados = cargarReportes();
       // Sin datos de demo (ADR-040) la red arranca vacia y solo se llena con lo que
       // reporte gente de verdad. Es lo que hace legible una prueba entre varias cuentas.
+      // Las semillas que un dispositivo persistio cuando los sembrados venian encendidos
+      // se purgan aqui (ADR-054): lo unico que sobrevive es lo reportado por personas.
+      const depurados =
+        guardados && !CONFIG.datosDemo ? guardados.filter((r) => !r.esSemilla) : guardados;
       const iniciales =
-        guardados ?? (CONFIG.datosDemo ? await construirReportesSembrados(Date.now()) : []);
+        depurados ?? (CONFIG.datosDemo ? await construirReportesSembrados(Date.now()) : []);
 
       if (!vigente) return;
       setReportes(iniciales);
       setCargando(false);
       if (!guardados) guardarReportes(iniciales);
+      else if (depurados && depurados.length !== guardados.length) guardarReportes(depurados);
 
       // Indice compartido (ADR-032): solo cuando el adaptador ya no es el simulado.
       // Nunca bloquea la carga inicial ni se persiste — se vuelve a leer en cada

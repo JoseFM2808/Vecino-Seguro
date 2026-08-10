@@ -591,7 +591,10 @@ export function FlujoReporte() {
         </section>
 
         <section>
-          <h2 className="etiqueta-seccion mb-2">Recompensa</h2>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="etiqueta-seccion">Recompensa</h2>
+            <EtiquetaSimulado titulo="Recompensa de demostracion: el token aun no tiene valor real" />
+          </div>
           <div className="tarjeta p-4">
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-semibold tabular-nums text-marca">
@@ -605,6 +608,10 @@ export function FlujoReporte() {
               ) : null}
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-suave">{reporte.recompensa.motivo}</p>
+            <p className="mt-2 text-[11px] leading-relaxed text-tenue">
+              Esta recompensa es una simulacion: la aplicacion aun esta en demo y el token
+              todavia no tiene valor real.
+            </p>
           </div>
         </section>
 
